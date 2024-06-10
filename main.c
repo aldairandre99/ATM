@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <sqlite3.h>
 #include <unistd.h>
+#include <time.h>
 
 // Estrutura de dados Dos Menu
 typedef struct
@@ -19,6 +20,28 @@ Opcoes opcoesIniciais[] = {
     {"Sair", 5}
 };
 
+// Definição dos campos presentes nas nossas tabelas no banco de dados
+typedef struct User {
+  int user_id;
+  char nome[50];
+} User;
+
+typedef struct Conta {
+  int conta_id;
+  int user_id;
+  char conta_numero[20];
+  double saldo;
+} Conta;
+
+typedef struct Transacoes {
+  int transacao_id;
+  int conta_id;
+  char data_da_transacao[20];
+  char transacao_do_tipo[20];
+  double quantidade;
+  int conta_destina_id; // Optional for transfers
+} Transacoes;
+
 // Funções protótipo
 int criarTabelasNoBancoDeDados(sqlite3 *db);
 void verificaUsuariosNoBd(sqlite3 *db);
@@ -30,6 +53,7 @@ void menu(Opcoes *opcoes, int tamanho_Das_Opcoes);
 void registrarUsuario(sqlite3 *db);
 void copy_right(void);
 void logotipo_Do_Banco(void);
+int generateIban(void);
 
 
 // Função principal
@@ -97,46 +121,40 @@ int main() {
 int criarTabelasNoBancoDeDados(sqlite3 *db) {
     int rc;
 
-    // Abrir o banco de dados
-    /* rc = sqlite3_open("atm.db", &db);
-   
-    if (rc != SQLITE_OK) {
-      fprintf(stderr, "Erro ao abrir banco de dados: %s\n", sqlite3_errmsg(db));
-      return 1;
-    } */
 
     // Criar tabela "usuarios"
-    char sql[] = "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, senha TEXT NOT NULL, pin INTEGER NOT NULL)";
-    rc = sqlite3_exec(db, sql, NULL, 0, NULL);
+    char sqlUser[] = "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, pin INTEGER NOT NULL)";
+    rc = sqlite3_exec(db, sqlUser, NULL, 0, NULL);
 
     if (rc != SQLITE_OK) {
       fprintf(stderr, "Erro ao criar tabela: %s\n", sqlite3_errmsg(db));
       system("clear");
     }
 
-    // Criar tabela "balance" (Create table "balance")
-    char sqlBalance[] = "CREATE TABLE balance (id INTEGER PRIMARY KEY AUTOINCREMENT, conta INTEGER NOT NULL, saldo REAL NOT NULL, FOREIGN KEY(conta) REFERENCES users(id))";
-    rc = sqlite3_exec(db, sqlBalance, NULL, 0, NULL);
-
-    if (rc != SQLITE_OK) {
-    fprintf(stderr, "Erro ao criar tabela: %s\n", sqlite3_errmsg(db));
-    system("clear");
-    }
     
     // Criar tabela "accounts"
-   /*  char sqlAccounts[] = "CREATE TABLE accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, saldo REAL NOT NULL, FOREIGN KEY(user_id) REFERENCES users(id))";
+    char sqlAccounts[] = "CREATE TABLE accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, conta_numero INTEGER NOT NULL , saldo REAL NOT NULL, FOREIGN KEY(user_id) REFERENCES users(id))";
     rc = sqlite3_exec(db, sqlAccounts, NULL, 0, NULL);
 
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Erro ao criar tabela: %s\n", sqlite3_errmsg(db));
         system("clear");
-    } */
+    }
+
+     // Criar tabela "Transactions"
+    char sqlTransactions[] = "CREATE TABLE transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, conta_id INTEGER NOT NULL, data_da_transacao TEXT NOT NULL, transacao_do_tipo TEXT NOT NULL, quantidade INTEGER NOT NULL, conta_destina_id INTEGER NOT NULL,FOREIGN KEY(conta_id) REFERENCES accounts(user_id), FOREIGN KEY(conta_destina_id) REFERENCES accounts(conta_numero) )";
+    rc = sqlite3_exec(db, sqlTransactions, NULL, 0, NULL);
+
+    if (rc != SQLITE_OK) {
+    fprintf(stderr, "Erro ao criar tabela: %s\n", sqlite3_errmsg(db));
+    system("clear");
+    }
 
     return rc;
 
 }
 
-//Verificar ser ha usuarios no banco de dados
+//Verificar se ha usuarios no banco de dados
 
 void verificaUsuariosNoBd(sqlite3 *db){
     char sql[] = "SELECT * FROM users" ;
@@ -156,19 +174,18 @@ void menu(Opcoes *opcoes, int tamanho_Das_Opcoes)
 void registrarUsuario(sqlite3 *db) {
   char nome[50];
   char *errMsg = 0;
-  char senha[20];
   int pin;
   double saldo;
   int rc;
-
+  int userId;
+  sqlite3_stmt *stmt;
+  int iban = generateIban();
+  
   system("clear");
   logotipo_Do_Banco();
 
   printf("\tDigite seu nome: ");
   scanf("%s", nome);
-
-  printf("\tDigite sua senha: ");
-  scanf("%s", senha);
 
   printf("\tDigite um PIN: ");
   scanf("%d", &pin);
@@ -176,22 +193,39 @@ void registrarUsuario(sqlite3 *db) {
   printf("\tDigite saldo: ");
   scanf("%lf", &saldo);
 
-  // Prepare and execute SQL statement to insert new user data
+  // Inserindo dados para tabela users
   char sql[256];
-  sprintf(sql, "INSERT INTO users (nome, senha, pin) VALUES ('%s', '%s', %d)", nome, senha, pin);
+  sprintf(sql, "INSERT INTO users (nome, pin) VALUES ('%s', %d)", nome, pin);
   rc = sqlite3_exec(db, sql, 0, 0, &errMsg);
 
   if ( rc != SQLITE_OK) {
     fprintf(stderr, "Erro no SQL: %s\n", errMsg);
     sqlite3_free(errMsg);
-  } else {
+  } else {     
     sleep(2);
     system("clear");
     logotipo_Do_Banco();
-    printf("\t\tUsuário registrado com sucesso!\n");
-    sleep(5);
-    system("clear");
   }
+
+  userId = sqlite3_last_insert_rowid(db);
+
+  // // Inserindo dados para tabela accounts
+  sql[256];
+  sprintf(sql, "INSERT INTO accounts (user_id, conta_numero, saldo) VALUES ('%d','%d','%.2f')", userId,iban,saldo);
+  rc = sqlite3_exec(db, sql, 0, 0, &errMsg);
+
+  if ( rc != SQLITE_OK) {
+    fprintf(stderr, "Erro no SQL: %s\n", errMsg);
+    sqlite3_free(errMsg);
+  } 
+
+  printf("\t\tUsuaria criado com sucesso");
+  puts("\n");
+  printf("\t\t- SEUS DADOS - \n\n");
+  printf("\t\tID: %d\n",userId);
+  printf("\t\tNome: %s\n",nome);
+  printf("\t\tIBAN: %d",iban);
+  puts("\n");
 }
 
 // Função para autenticar usuário
@@ -245,6 +279,9 @@ void depositarDinheiro(sqlite3 *db, int userId) {
     
     system("clear");
     logotipo_Do_Banco();
+
+    printf("\tDigite o IBAN: ");
+    scanf("%f", &deposito);
     
     printf("\tDigite o valor para depositar: KZ ");
     scanf("%f", &deposito);
@@ -346,4 +383,19 @@ void logotipo_Do_Banco()
   puts("\t============================================");
   puts("");
   puts("");
+}
+
+int generateIban() {
+    // Seed the random number generator with the current time
+    srand(time(NULL));
+
+    // Generate a random number between 1000 and 9999
+    int randomNumber = (rand() % 9000) + 1000;
+
+    // Check if the number has at least 4 digits. If not, regenerate it.
+    while (randomNumber < 1000) {
+        randomNumber = (rand() % 9000) + 1000;
+    }
+
+    return randomNumber;
 }
