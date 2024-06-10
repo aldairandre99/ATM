@@ -286,16 +286,6 @@ void depositarDinheiro(sqlite3 *db, int userId) {
     printf("\tDigite o valor para depositar: KZ ");
     scanf("%f", &deposito);
 
-    /* "CREATE TABLE balance (id INTEGER PRIMARY KEY AUTOINCREMENT, conta INTEGER NOT NULL, saldo REAL NOT NULL, FOREIGN KEY(conta) REFERENCES users(id))";
-    */
-    /* char sqlBalance[256];
-    sprintf(sqlBalance, "INSERT INTO balance (conta) VALUES ('%d')", userId);
-    
-    if (sqlite3_exec(db, sqlBalance, 0, 0, &errMsg) != SQLITE_OK) {
-        fprintf(stderr, "Erro no SQL: %s\n", errMsg);
-        sqlite3_free(errMsg);
-    } */
-
     if (deposito > 0) { 
         char sql[256];
         sprintf(sql, "UPDATE accounts SET saldo = saldo + %.2f WHERE user_id = %d", deposito, userId);
