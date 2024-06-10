@@ -44,7 +44,6 @@ typedef struct Transacoes {
 
 // Funções protótipo
 int criarTabelasNoBancoDeDados(sqlite3 *db);
-void verificaUsuariosNoBd(sqlite3 *db);
 int autenticarUsuario(sqlite3 *db, int *userId, int pin);
 void verificarSaldo(sqlite3 *db, int userId);
 void depositarDinheiro(sqlite3 *db, int userId);
@@ -69,21 +68,21 @@ int main() {
 
     criarTabelasNoBancoDeDados(db);
 
-    /* verificaUsuariosNoBd(db); */
-
-    // Autenticação de usuário
-  /*   if (!autenticarUsuario(db,&userId, pin)) {
-        printf("Autenticação falhou! Saindo...\n");
-        sqlite3_close(db);
-        return 1;
-    } */
-
     logotipo_Do_Banco();
     printf("\tNumero de Usuario: ");
     scanf("%d",&userId);
     printf("\tDigite seu PIN: ");
     scanf("%d", &pin);
     system("clear");
+
+
+     // Autenticação de usuário
+    if (!autenticarUsuario(db,&userId, pin)) {
+        printf("Autenticação falhou! Saindo...\n");
+        sqlite3_close(db);
+        return 1;
+    }
+
     do {
         logotipo_Do_Banco();
         menu(opcoesIniciais, (sizeof(opcoesIniciais) / sizeof(opcoesIniciais[0])));
@@ -152,12 +151,6 @@ int criarTabelasNoBancoDeDados(sqlite3 *db) {
 
     return rc;
 
-}
-
-//Verificar se ha usuarios no banco de dados
-
-void verificaUsuariosNoBd(sqlite3 *db){
-    char sql[] = "SELECT * FROM users" ;
 }
 
 // Funcão responsavel por exibir os elementos da estrutura de dados presentes na lista
@@ -253,7 +246,7 @@ int autenticarUsuario(sqlite3 *db, int *userId,int pin) {
 void verificarSaldo(sqlite3 *db, int userId) {
     logotipo_Do_Banco();
     char sql[256];
-    sprintf(sql, "SELECT balance FROM accounts WHERE user_id = %d", userId);
+    sprintf(sql, "SELECT saldo FROM accounts WHERE user_id = %d", userId);
 
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) != SQLITE_OK) {
@@ -264,9 +257,9 @@ void verificarSaldo(sqlite3 *db, int userId) {
     int res = sqlite3_step(stmt);
     if (res == SQLITE_ROW) {
         double saldo = sqlite3_column_double(stmt, 0);
-        printf("Seu saldo atual é: %.2f KZ\n", saldo);
+        printf("\tSeu saldo atual é: %.2f KZ\n\n\n", saldo);
     } else {
-        printf("Erro ao verificar saldo.\n");
+        printf("\tErro ao verificar saldo.\n\n\n");
     }
 
     sqlite3_finalize(stmt);
@@ -304,13 +297,17 @@ void depositarDinheiro(sqlite3 *db, int userId) {
 // Função para sacar dinheiro
 void sacarDinheiro(sqlite3 *db, int userId) {
     float saque;
+
+    system("clear");
+    logotipo_Do_Banco();
+
     printf("Digite o valor para sacar: KZ ");
     scanf("%f", &saque);
 
     if (saque > 0) {
         // Verificar saldo
         char sql[256];
-        sprintf(sql, "SELECT balance FROM accounts WHERE user_id = %d", userId);
+        sprintf(sql, "SELECT saldo FROM accounts WHERE user_id = %d", userId);
 
         sqlite3_stmt *stmt;
         if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) != SQLITE_OK) {
@@ -324,7 +321,7 @@ void sacarDinheiro(sqlite3 *db, int userId) {
             sqlite3_finalize(stmt);
 
             if (saque <= saldo) {
-                sprintf(sql, "UPDATE accounts SET balance = balance - %.2f WHERE user_id = %d", saque, userId);
+                sprintf(sql, "UPDATE accounts SET saldo = saldo - %.2f WHERE user_id = %d", saque, userId);
                 char *errMsg = 0;
                 if (sqlite3_exec(db, sql, 0, 0, &errMsg) != SQLITE_OK) {
                     fprintf(stderr, "Erro no SQL: %s\n", errMsg);
