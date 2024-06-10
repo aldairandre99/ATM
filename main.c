@@ -287,10 +287,10 @@ void depositarDinheiro(sqlite3 *db, int userId) {
             fprintf(stderr, "Erro no SQL: %s\n", errMsg);
             sqlite3_free(errMsg);
         } else {
-            printf("\tDepósito realizado com sucesso!\n");
+            printf("\tDepósito realizado com sucesso!\n\n\n");
         }
     } else {
-        printf("\tValor de depósito inválido!\n");
+        printf("\tValor de depósito inválido!\n\n\n");
     }
 }
 
@@ -327,16 +327,16 @@ void sacarDinheiro(sqlite3 *db, int userId) {
                     fprintf(stderr, "Erro no SQL: %s\n", errMsg);
                     sqlite3_free(errMsg);
                 } else {
-                    printf("Saque realizado com sucesso!\n");
+                    printf("\tSaque realizado com sucesso!\n\n\n");
                 }
             } else {
-                printf("Saldo insuficiente!\n");
+                printf("\tSaldo insuficiente!\n\n\n");
             }
         } else {
-            printf("Erro ao verificar saldo.\n");
+            printf("\tErro ao verificar saldo.\n\n\n");
         }
     } else {
-        printf("Valor de saque inválido!\n");
+        printf("\tValor de saque inválido!\n\n\n");
     }
 }
 
