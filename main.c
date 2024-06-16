@@ -44,7 +44,7 @@ typedef struct Transacoes {
 
 // Funções protótipo
 int criarTabelasNoBancoDeDados(sqlite3 *db);
-int autenticarUsuario(sqlite3 *db, int *userId, int pin);
+int autenticarUsuario(sqlite3 *db, int userId, int pin);
 void verificarSaldo(sqlite3 *db, int userId);
 void depositarDinheiro(sqlite3 *db, int userId);
 void sacarDinheiro(sqlite3 *db, int userId);
@@ -77,7 +77,8 @@ int main() {
 
 
      // Autenticação de usuário
-    if (!autenticarUsuario(db,&userId, pin)) {
+    if (!autenticarUsuario(db, userId, pin))
+    {
         printf("Autenticação falhou! Saindo...\n");
         sqlite3_close(db);
         return 1;
@@ -222,7 +223,8 @@ void registrarUsuario(sqlite3 *db) {
 }
 
 // Função para autenticar usuário
-int autenticarUsuario(sqlite3 *db, int *userId,int pin) {
+int autenticarUsuario(sqlite3 *db, int userId, int pin)
+{
     char sql[256];
     sprintf(sql, "SELECT id FROM users WHERE pin = %d",pin);
     sqlite3_stmt *stmt;
@@ -233,7 +235,7 @@ int autenticarUsuario(sqlite3 *db, int *userId,int pin) {
 
     int res = sqlite3_step(stmt);
     if (res == SQLITE_ROW) {
-        *userId = sqlite3_column_int(stmt, 0);
+        userId = sqlite3_column_int(stmt, 0);
         sqlite3_finalize(stmt);
         return 1;
     } else {
